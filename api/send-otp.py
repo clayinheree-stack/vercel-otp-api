@@ -7,6 +7,7 @@ import time
 import uuid
 import hashlib
 import string
+import os
 
 # ==================== API KEY ====================
 API_KEY = "PIKY-GANZ-XYTOOLZ"  # Ganti dengan key loe
@@ -58,6 +59,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(response.encode())
         
 def spam_otp_all(nomor):
+    sukses = []
+    gagal = []
+    
     # Daftar API yang dipanggil (SEMUA ADA di file ini)
     api_list = [
         spam_otp_adiraku,
@@ -100,11 +104,39 @@ def spam_otp_all(nomor):
     for api_func in api_list:
         try:
             if api_func(nomor):
-                return True
+                sukses.append(api_func.__name__)
+            else:
+                gagal.append(api_func.__name__)
         except:
-            continue
+            gagal.append(api_func.__name__)
     
-    return False
+    # ===== LOG KE FILE =====
+    try:
+        log_data = {
+            "nomor": nomor,
+            "sukses": sukses,
+            "gagal": gagal,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Simpan log ke file (bisa diakses di server Vercel)
+        log_path = os.path.join(os.path.dirname(__file__), "otp_log.json")
+        with open(log_path, "w") as f:
+            json.dump(log_data, f, indent=4)
+        
+        # Print log ke console (untuk Vercel Logs)
+        print(f"[LOG] Nomor: {nomor}")
+        print(f"[LOG] Sukses: {sukses}")
+        print(f"[LOG] Gagal: {gagal}")
+        print(f"[LOG] Waktu: {log_data['timestamp']}")
+        
+        # Bisa juga kirim log ke Telegram (opsional)
+        # send_log_to_telegram(log_data)
+        
+    except Exception as e:
+        print(f"[LOG ERROR] {e}")
+    
+    return len(sukses) > 0
     
 def spam_otp_adiraku(nomor):
     try:
